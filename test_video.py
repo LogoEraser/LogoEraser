@@ -145,11 +145,19 @@ def logopreds(prediction_model, image, p):
             continue
         b = detections[0, idx, :4].astype(int)
 
-        if p['erase'] == "erase":
-            # Detect된 영역 Masking
-            cv2.rectangle(mask, (b[0], b[1]), (b[2], b[3]), (255, 255, 255), -1)
-            # cv2.INPAINT_TELEA / cv2.INPAINT_NS
+        # 타원으로 마스킹 하기 위한 계산(center: 타원 중심, axes: 중심에서 가장 큰 거리와 작은 거리)
+        center = ((int)((b[0] + b[2]) / 2), (int)((b[1] + b[3]) / 2))
+        axes = ((int)(abs((b[0] - b[2]) / 2)), (int)(abs((b[1] - b[3]) / 2)))
 
+        if p['erase'] == "erase":
+
+            # Detect된 영역 Masking(사각형)
+            # cv2.rectangle(mask, (b[0], b[1]), (b[2], b[3]), (255, 255, 255), -1)
+
+            # Detect된 영역 Masking(타원)
+            cv2.ellipse(mask, center, axes, 0, 0, 360, 255, -1)
+
+            # cv2.INPAINT_TELEA / cv2.INPAINT_NS
             dst = cv2.inpaint(draw, mask, 0.01, cv2.INPAINT_NS)
             draw = dst
         else:
@@ -157,7 +165,7 @@ def logopreds(prediction_model, image, p):
             caption = "{} {:.3f}".format(p['l2n'][label], score)
             cv2.putText(draw, caption, (b[0], b[1] - 10), cv2.FONT_HERSHEY_PLAIN, 1.5, (0, 0, 0), 3)
             cv2.putText(draw, caption, (b[0], b[1] - 10), cv2.FONT_HERSHEY_PLAIN, 1.5, (255, 255, 255), 2)
-    # cv2.imshow("mask", mask)
+    #cv2.imshow("mask", mask)
     return draw
 
 
@@ -169,6 +177,7 @@ def main(argv):
     cap = cv2.VideoCapture(p['video'])
 
     fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+    # 영상 크기에 맞게 조절해야 저장됨
     out = cv2.VideoWriter(p['output'], fourcc, 20.0, (854, 480))
 
     while (cap.isOpened()):
@@ -196,3 +205,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv[1:])
+
